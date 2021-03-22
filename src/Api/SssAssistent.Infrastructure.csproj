@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="3.1.2" />
+      <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.1" />
+      <PackageReference Include="Minio" Version="3.1.9" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="3.1.0" />
+        <PackageReference Include="PreMailer.Net" Version="2.2.0" />
+        <PackageReference Include="RabbitMQ.Client" Version="6.0.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.5.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\SssAssistent.Domain\SssAssistent.Domain.csproj" />
+      <ProjectReference Include="..\SssAssistent.SharedKernel\SssAssistent.SharedKernel.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="DataBase\Entities\Identity\ApplicationUserManager.cs" />
+    </ItemGroup>
+
+</Project>
