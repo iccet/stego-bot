@@ -1,0 +1,21 @@
+version: "2"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 15672:15672
+      - 5672:5672
+    restart: always
+  
+  backend:
+    container_name: backend
+    build: .
+    ports:
+      - "8080:5000"
+    depends_on:
+      - rabbitmq
+    environment:
+      - TELEGRAM_TOKEN=$TELEGRAM_TOKEN
+    
+    restart: always
