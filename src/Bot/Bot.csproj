@@ -14,4 +14,19 @@
       <PackageReference Include="Telegram.Bot" Version="15.7.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Update="Services\Commands.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Commands.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Services\Commands.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Commands.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
 </Project>

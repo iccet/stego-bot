@@ -40,6 +40,16 @@ namespace Bot.Services
         private readonly ILogger<IPostService> _logger;
         private readonly CancellationTokenSource _token;
         private bool _disposed;
+        private const string _commandDocFormat = "/{0} : {1} \n";
+
+        private readonly Dictionary<Command, string> _commandDocs = new Dictionary<Command, string>
+        {
+            {Command.help, Commands.Help},
+            {Command.inline, Commands.Inline},
+            {Command.start, Commands.Start},
+            {Command.sub, Commands.Subscribe},
+            {Command.unsub, Commands.Unsubscribe},
+        };
 
         #endregion
 
@@ -113,8 +123,7 @@ namespace Bot.Services
 
             var result = Enum.TryParse(message.Text
                 .Split(' ')
-                .First()
-                .Substring(1)
+                .First()[1..]
                 .Trim(), out command);
 
             if (!result) command = Command.input;
@@ -208,18 +217,9 @@ namespace Bot.Services
         }
         
         #region Usage
-        private static string BuildDoc(IEnumerable<Command> triggers)
+        private string BuildDoc(IEnumerable<Command> triggers)
         {
-            var builder = new StringBuilder();
-            foreach (var command in triggers)
-            {
-                var info = command.GetType().GetField(command.ToString());
-                if (info.GetCustomAttributes(typeof(DescriptionAttribute), false) is DescriptionAttribute[] attributes && attributes.Any())
-                {
-                    builder.Append($"/{command} : {attributes.First().Description}\n");
-                }
-            }
-            return builder.ToString();
+            return string.Concat(triggers.Select(t => string.Format(_commandDocFormat, t, _commandDocs[t])));
         }
         
         private async Task Usage(Message message)

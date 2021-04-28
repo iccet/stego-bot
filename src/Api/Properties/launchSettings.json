@@ -3,11 +3,11 @@
   "profiles": {
     "Api": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "launchBrowser": false,
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "TELEGRAM_TOKEN": ""
+        "TELEGRAM_TOKEN": "1709467935:AAEaGG_69huV24Oprw__S169eH5KPb-0VH4"
       }
     }
   }
