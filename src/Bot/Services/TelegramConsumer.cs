@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -163,7 +162,13 @@ namespace Bot.Services
                 await _machine.FireAsync(param, message, null);
             }
 
-            using (_logger.BeginScope(message.From.Id))
+            var scope = new Dictionary<string, object>
+            {
+                {"UserId", message.From.Username},
+                {"Event", nameof(OnMessageReceived)}
+            };
+    
+            using (_logger.BeginScope(scope))
             {
                 _logger.LogInformation(_machine.State.ToString());
             }

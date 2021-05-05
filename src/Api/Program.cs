@@ -1,7 +1,11 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Formatting.Elasticsearch;
+using Serilog.Sinks.Elasticsearch;
 
 namespace Api
 {
@@ -14,11 +18,29 @@ namespace Api
         
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((builderContext, config) =>
+                {
+                    var env = builderContext.HostingEnvironment;
+                    config.SetBasePath(env.ContentRootPath)
+                        .AddJsonFile("appsettings.json")
+                        .AddJsonFile(string.Join('.', "appsettings", env.EnvironmentName, "json"), false, false)
+                        .AddEnvironmentVariables();
+                })
+                .UseSerilog((context, services, configuration) =>
+                {
+                    var host = context.Configuration.GetValue<Uri>("ELASTICSEARCH_URI");
+                    configuration.ReadFrom.Configuration(context.Configuration)
+                        .ReadFrom.Services(services)
+                        .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(host)
+                        {
+                            CustomFormatter = new ElasticsearchJsonFormatter(),
+                            AutoRegisterTemplate = true,
+                            AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv6
+                        });
+                })
                 .ConfigureLogging(logging =>
                 {
-                    logging.AddConsole();
-                    logging.AddFilter("Microsoft", LogLevel.Warning);
-                    logging.SetMinimumLevel(LogLevel.Information);
+                    logging.AddSerilog(dispose: true);
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

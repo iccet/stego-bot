@@ -9,6 +9,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "DATABASE_CONNECTION_STRING": "server=localhost;Port=5432;Database=stego;User Id=stego;Password=Q12345q; Include Error Detail=true",
         "TELEGRAM_TOKEN": "1709467935:AAEaGG_69huV24Oprw__S169eH5KPb-0VH4",
+        "ELASTICSEARCH_URI": "http://localhost:9200",
         "REDIS_CONNECTION_STRING": "localhost,password=Q12345q"
       }
     }
