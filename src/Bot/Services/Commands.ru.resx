@@ -11,20 +11,20 @@
     <resheader name="writer">
         <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
     </resheader>
-    <data name="Start" xml:space="preserve">
-        <value>Начать работу с ботом со сброшенным состоянием</value>
+    <data name="Help" xml:space="preserve">
+        <value>Показать помощь</value>
     </data>
     <data name="Inline" xml:space="preserve">
         <value>Войти в inline режим</value>
+    </data>
+    <data name="Start" xml:space="preserve">
+        <value>Начать работу с ботом со сброшенным состоянием</value>
     </data>
     <data name="Subscribe" xml:space="preserve">
         <value>Подписаться на оповещения</value>
     </data>
     <data name="Unsubscribe" xml:space="preserve">
         <value>Отписаться от оповещений</value>
-    </data>
-    <data name="Help" xml:space="preserve">
-        <value>Показать помощь</value>
     </data>
     <data name="Input" xml:space="preserve">
         <value>Режим ручного ввода</value>

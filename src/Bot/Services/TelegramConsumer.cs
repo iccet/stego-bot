@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -35,6 +36,10 @@ namespace Bot.Services
         
         #region Fields
 
+        private delegate string DocString();
+        private readonly Dictionary<Command, DocString> _commandDocs;
+        private const string CommandDocFormat = "/{0} : {1}";
+
         private readonly StateMachine _machine;
         private readonly Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>> _params;
         private readonly ITelegramBotClient _client;
@@ -42,16 +47,6 @@ namespace Bot.Services
         private readonly ILogger<IPostService> _logger;
         private readonly CancellationTokenSource _token;
         private bool _disposed;
-        private const string _commandDocFormat = "/{0} : {1} \n";
-
-        private readonly Dictionary<Command, string> _commandDocs = new Dictionary<Command, string>
-        {
-            {Command.help, Commands.Help},
-            {Command.inline, Commands.Inline},
-            {Command.start, Commands.Start},
-            {Command.sub, Commands.Subscribe},
-            {Command.unsub, Commands.Unsubscribe},
-        };
 
         #endregion
 
@@ -86,6 +81,15 @@ namespace Bot.Services
             ILogger<IPostService> logger,
             IDistributedCache cache)
         {
+            _commandDocs = new Dictionary<Command, DocString>
+            {
+                {Command.help, () => Commands.Help},
+                {Command.inline, () => Commands.Inline},
+                {Command.start, () => Commands.Start},
+                {Command.sub, () => Commands.Subscribe},
+                {Command.input, () => Commands.Input},
+                {Command.unsub, () => Commands.Unsubscribe},
+            };
             _machine = new StateMachine(State.idle);
             _params = new Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>>();
             _client = client;
@@ -130,6 +134,8 @@ namespace Bot.Services
 
         private async void OnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
+            Commands.Culture = CultureInfo.GetCultureInfo(messageEventArgs.Message.From.LanguageCode);
+            
             Command command;
             var message = messageEventArgs.Message;
             if (message == null || message.Type != MessageType.Text) return;
@@ -232,17 +238,17 @@ namespace Bot.Services
         #region Usage
         private string BuildDoc(IEnumerable<Command> triggers)
         {
-            return string.Concat(triggers.Select(t => string.Format(_commandDocFormat, t, _commandDocs[t])));
+            return string.Join('\n', triggers.Select(t => string.Format(CommandDocFormat, t, _commandDocs[t]())));
         }
         
-        private async Task Usage(Message message)
+        private Task Usage(Message message)
         {
-            await Usage(message, BuildDoc(_machine.PermittedTriggers));
+            return Usage(message, BuildDoc(_machine.PermittedTriggers));
         }
 
-        private async Task Usage(Message message, string doc)
+        private Task Usage(Message message, string doc)
         {
-            await _client.SendTextMessageAsync(message.Chat.Id, doc, replyMarkup: new ReplyKeyboardRemove());
+            return _client.SendTextMessageAsync(message.Chat.Id, doc, replyMarkup: new ReplyKeyboardRemove());
         }
         #endregion
 
@@ -280,9 +286,7 @@ namespace Bot.Services
             var idle = _machine.Configure(State.idle)
                 .PermitReentry(Command.start)
                 .PermitReentry(Command.input)
-                .OnEntryFromAsync(Command.start, t => t.Source != State.idle 
-                    ? Usage(t.Parameters.First() as Message)
-                    : Task.CompletedTask)
+                .OnEntryFrom(Param(Command.start), (message, query) => Usage(message))
                 
                 .Permit(Command.inline, State.inline);
 

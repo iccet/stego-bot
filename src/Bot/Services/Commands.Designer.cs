@@ -74,5 +74,11 @@ namespace Bot.Services {
                 return ResourceManager.GetString("Help", resourceCulture);
             }
         }
+        
+        internal static string Input {
+            get {
+                return ResourceManager.GetString("Input", resourceCulture);
+            }
+        }
     }
 }
