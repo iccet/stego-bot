@@ -82,14 +82,14 @@ namespace Bot.Services
         {
             _commandDocs = new Dictionary<Command, DocString>
             {
-                {Command.help, () => Commands.Help},
-                {Command.inline, () => Commands.Inline},
-                {Command.start, () => Commands.Start},
-                {Command.sub, () => Commands.Subscribe},
-                {Command.input, () => Commands.Input},
-                {Command.unsub, () => Commands.Unsubscribe},
+                {Command.Help, () => Commands.Help},
+                {Command.Inline, () => Commands.Inline},
+                {Command.Start, () => Commands.Start},
+                {Command.Encode, () => Commands.Encode},
+                {Command.Input, () => Commands.Input},
+                {Command.Decode, () => Commands.Decode},
             };
-            _machine = new StateMachine(State.idle);
+            _machine = new StateMachine(State.Idle);
             _params = new Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>>();
             _client = client;
             _logger = logger;
@@ -133,44 +133,46 @@ namespace Bot.Services
 
         private async void OnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
-            Commands.Culture = CultureInfo.GetCultureInfo(messageEventArgs.Message.From.LanguageCode);
-            
-            Command command;
             var message = messageEventArgs.Message;
-            if (message == null || message.Type != MessageType.Text) return;
-
-            var result = Enum.TryParse(message.Text
-                .Split(' ')
-                .First()[1..]
-                .Trim(), out command);
-
-            if (!result) command = Command.input;
-
-            var param = Param(command);
-            try
-            {
-                await _machine.FireAsync(param, message, null);
-            }
-            catch (Exception e)
-            {
-                using (_logger.BeginScope(message.From.Id))
-                {
-                    _logger.LogError(e.Message);
-                }
-                
-                param = Param(Command.help);
-                await _machine.FireAsync(param, message, null);
-            }
-
             var scope = new Dictionary<string, object>
             {
                 {"UserId", message.From.Username},
                 {"Event", nameof(OnMessageReceived)}
             };
-    
+
+            Commands.Culture = CultureInfo.GetCultureInfo(
+#if  DEBUG
+            "ru"      
+#else
+            messageEventArgs.Message.From.LanguageCode
+#endif
+            );
+
+            if (message == null || message.Type != MessageType.Text) return;
+
+            var result = Enum.TryParse(message.Text
+                .Split(' ')
+                .First()[1..]
+                .Trim(), true, out Command command);
+
+            if (!result) command = Command.Input;
+
+            var param = Param(command);
+            
             using (_logger.BeginScope(scope))
             {
-                _logger.LogInformation(_machine.State.ToString());
+                try
+                {
+                    await _machine.FireAsync(param, message, null);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e.Message);
+                
+                    param = Param(Command.Help);
+                    await _machine.FireAsync(param, message, null);
+                }
+                _logger.LogInformation("Current state {State}", _machine.State);
             }
         }
 
@@ -179,7 +181,7 @@ namespace Bot.Services
             var query = callbackQueryEventArgs.CallbackQuery;
             try
             {
-                var param = Param(Command.input);
+                var param = Param(Command.Input);
                 await _machine.FireAsync(param, null, query);
             }
             catch (Exception e)
@@ -243,7 +245,10 @@ namespace Bot.Services
         #region Usage
         private string BuildDoc(IEnumerable<Command> triggers)
         {
-            return string.Join('\n', triggers.Select(t => string.Format(CommandDocFormat, t, _commandDocs[t]())));
+            return string.Join('\n', triggers.Select(t => string.Format(
+                CommandDocFormat, 
+                t.ToString("G").ToLower(),
+                _commandDocs[t]())));
         }
         
         private Task Usage(Message message)
@@ -288,35 +293,35 @@ namespace Bot.Services
         {
             ConfigureTriggerParameters();
             
-            var idle = _machine.Configure(State.idle)
-                .PermitReentry(Command.start)
-                .PermitReentry(Command.input)
-                .OnEntryFrom(Param(Command.start), (message, query) => Usage(message))
+            var idle = _machine.Configure(State.Idle)
+                .PermitReentry(Command.Start)
+                .PermitReentry(Command.Input)
+                .OnEntryFrom(Param(Command.Start), (message, query) => Usage(message))
                 
-                .Permit(Command.inline, State.inline);
+                .Permit(Command.Inline, State.Inline);
 
-            var inline = _machine.Configure(State.inline)
-                .OnEntryFromAsync(Param(Command.inline), 
+            var inline = _machine.Configure(State.Inline)
+                .OnEntryFromAsync(Param(Command.Inline), 
                     async (m, q) => await SendReplyKeyboard(m));
 	
-            var encoding = _machine.Configure(State.encoding)
-                .PermitReentry(Command.input)
-                .PermitReentry(Command.sub)
-                .PermitReentry(Command.unsub)
-                .OnEntryFromAsync(Param(Command.input), 
+            var encoding = _machine.Configure(State.Source)
+                .PermitReentry(Command.Input)
+                .PermitReentry(Command.Encode)
+                .PermitReentry(Command.Decode)
+                .OnEntryFromAsync(Param(Command.Input), 
                     async (m, q) => await Input(q));
 	
             var common = new[] {encoding, inline, idle};
             foreach (var conf in common)
             {
-                conf.PermitReentry(Command.help)
-                    .OnEntryFrom(Param(Command.help),
+                conf.PermitReentry(Command.Help)
+                    .OnEntryFrom(Param(Command.Help),
                         async (message, query) => await Usage(message));
             }
             
             foreach (var conf in common.Take(common.Length - 1))
             {
-                conf.Permit(Command.start, State.idle);
+                conf.Permit(Command.Start, State.Idle);
             }
         }
 

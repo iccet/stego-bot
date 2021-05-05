@@ -57,15 +57,15 @@ namespace Bot.Services {
             }
         }
         
-        internal static string Subscribe {
+        internal static string Encode {
             get {
-                return ResourceManager.GetString("Subscribe", resourceCulture);
+                return ResourceManager.GetString("Encode", resourceCulture);
             }
         }
         
-        internal static string Unsubscribe {
+        internal static string Decode {
             get {
-                return ResourceManager.GetString("Unsubscribe", resourceCulture);
+                return ResourceManager.GetString("Decode", resourceCulture);
             }
         }
         

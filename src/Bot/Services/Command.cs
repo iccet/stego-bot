@@ -1,15 +1,16 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace Bot.Services
 {
     [Serializable]
     public enum Command
     {
-        start,
-        inline,
-        sub,
-        unsub,
-        help,
-        input
+        Start,
+        Inline,
+        Encode,
+        Decode,
+        Help,
+        Input
     }
 }

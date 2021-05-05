@@ -54,6 +54,7 @@ namespace Api
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    options.JsonSerializerOptions.PropertyNamingPolicy = new JsonSnakeCaseNamingPolicy();
                 });
             
             // var builder = new NpgsqlConnectionStringBuilder(Configuration["DATABASE_CONNECTION_STRING"]);

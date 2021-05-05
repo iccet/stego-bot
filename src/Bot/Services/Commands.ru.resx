@@ -20,11 +20,11 @@
     <data name="Start" xml:space="preserve">
         <value>Начать работу с ботом со сброшенным состоянием</value>
     </data>
-    <data name="Subscribe" xml:space="preserve">
-        <value>Подписаться на оповещения</value>
+    <data name="Encode" xml:space="preserve">
+        <value>Сокрыть данные</value>
     </data>
-    <data name="Unsubscribe" xml:space="preserve">
-        <value>Отписаться от оповещений</value>
+    <data name="Decode" xml:space="preserve">
+        <value>Распознать исходник</value>
     </data>
     <data name="Input" xml:space="preserve">
         <value>Режим ручного ввода</value>

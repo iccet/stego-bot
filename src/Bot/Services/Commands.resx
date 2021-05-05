@@ -24,11 +24,11 @@
     <data name="Inline" xml:space="preserve">
         <value>Enter inline mode </value>
     </data>
-    <data name="Subscribe" xml:space="preserve">
-        <value>Subscribe to alerts</value>
+    <data name="Encode" xml:space="preserve">
+        <value>Encode data</value>
     </data>
-    <data name="Unsubscribe" xml:space="preserve">
-        <value>Unsubscribe from notifications </value>
+    <data name="Decode" xml:space="preserve">
+        <value>Decode source</value>
     </data>
     <data name="Help" xml:space="preserve">
         <value>Show Help</value>

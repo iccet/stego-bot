@@ -17,11 +17,11 @@
     <data name="Inline" xml:space="preserve">
         <value>Войти в inline режим</value>
     </data>
-    <data name="Subscribe" xml:space="preserve">
-        <value>Подписаться на оповещения</value>
+    <data name="Encode" xml:space="preserve">
+        <value>Сокрыть данные</value>
     </data>
-    <data name="Unsubscribe" xml:space="preserve">
-        <value>Отписаться от оповещений</value>
+    <data name="Decode" xml:space="preserve">
+        <value>Распознать исходник</value>
     </data>
     <data name="Help" xml:space="preserve">
         <value>Показать помощь</value>
