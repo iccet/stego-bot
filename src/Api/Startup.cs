@@ -10,6 +10,7 @@ using Core.Interfaces;
 using Data;
 using Data.Analytics;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using StackExchange.Redis;
 using Telegram.Bot;
 
 namespace Api
@@ -39,28 +41,39 @@ namespace Api
                 options.KnownNetworks.Add(new IPNetwork(IPAddress.Any, 0));
             });
 
+            services.AddStackExchangeRedisCache(opt =>
+            {
+                opt.Configuration = Configuration["REDIS_CONNECTION_STRING"];
+            });
+            
+            services.AddDataProtection()
+                .PersistKeysToStackExchangeRedis(ConnectionMultiplexer.Connect(Configuration["REDIS_CONNECTION_STRING"]),
+                    "DataProtection-Keys");
+            
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
             
-            var builder = new NpgsqlConnectionStringBuilder(Configuration["CONNECTION_STRING"]);
+            // var builder = new NpgsqlConnectionStringBuilder(Configuration["DATABASE_CONNECTION_STRING"]);
 
             services.AddDbContext<Context>(options =>
             {
-                options.UseNpgsql(builder.ConnectionString);
+                options.UseNpgsql(Configuration["DATABASE_CONNECTION_STRING"]);
                 options.EnableSensitiveDataLogging();
             });
             
             services.AddRabbit(Configuration);
+            
+            services.AddSingleton<ITelegramBotClient>(provider => 
+                new TelegramBotClient(Configuration["TELEGRAM_TOKEN"]));
 
-            services.AddSingleton<IPostService, TelegramConsumer>(provider =>
-            {
-                var client = new TelegramBotClient(Configuration["TELEGRAM_TOKEN"]);
-                var logger = provider.GetRequiredService<ILogger<IPostService>>();
-                return new TelegramConsumer(client, logger);
-            });
+            services.AddHostedService<TelegramConsumer>();
+
+            services.AddHealthChecks()
+                .AddNpgSql(Configuration["DATABASE_CONNECTION_STRING"])
+                .AddRedis(Configuration["REDIS_CONNECTION_STRING"]);
             
             services.AddSwaggerGen(c =>
             {

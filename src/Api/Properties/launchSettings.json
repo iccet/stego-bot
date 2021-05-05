@@ -7,7 +7,9 @@
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "TELEGRAM_TOKEN": "1709467935:AAEaGG_69huV24Oprw__S169eH5KPb-0VH4"
+        "DATABASE_CONNECTION_STRING": "server=localhost;Port=5432;Database=stego;User Id=stego;Password=Q12345q; Include Error Detail=true",
+        "TELEGRAM_TOKEN": "1709467935:AAEaGG_69huV24Oprw__S169eH5KPb-0VH4",
+        "REDIS_CONNECTION_STRING": "localhost,password=Q12345q"
       }
     }
   }

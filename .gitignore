@@ -36,4 +36,5 @@ msbuild.wrn
 
 # Visual Studio 2015
 .vs/
-/sss-assistent/mono_crash.mem.*
+
+.env

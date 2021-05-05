@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Interfaces;
 using Bot.Types;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -21,7 +22,7 @@ using StateMachine = Stateless.StateMachine<Bot.Services.State, Bot.Services.Com
 
 namespace Bot.Services
 {
-    public sealed class TelegramConsumer : IPostService
+    public sealed class TelegramConsumer : IPostService, IHostedService
     {
         #region Types
         [Serializable]
@@ -37,6 +38,7 @@ namespace Bot.Services
         private readonly StateMachine _machine;
         private readonly Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>> _params;
         private readonly ITelegramBotClient _client;
+        private readonly IDistributedCache _cache;
         private readonly ILogger<IPostService> _logger;
         private readonly CancellationTokenSource _token;
         private bool _disposed;
@@ -81,23 +83,34 @@ namespace Bot.Services
 
         public TelegramConsumer(
             ITelegramBotClient client,
-            ILogger<IPostService> logger)
+            ILogger<IPostService> logger,
+            IDistributedCache cache)
         {
             _machine = new StateMachine(State.idle);
             _params = new Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>>();
             _client = client;
             _logger = logger;
-            Subscribe();
-            ConfigureStateMachine();
+            _cache = cache;
             _token = new CancellationTokenSource();
-            _client.StartReceiving(Array.Empty<UpdateType>(), _token.Token);
         }
 
         #endregion
 
         #region Public
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            Subscribe();
+            ConfigureStateMachine();
+            _client.StartReceiving(Array.Empty<UpdateType>(), _token.Token);
+            return Task.CompletedTask;
+        }
 
-
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _token.Cancel();
+            _client.StopReceiving();
+            return Task.CompletedTask;
+        }
         #endregion
 
         #region Private
@@ -267,11 +280,10 @@ namespace Bot.Services
             var idle = _machine.Configure(State.idle)
                 .PermitReentry(Command.start)
                 .PermitReentry(Command.input)
-                .OnEntry(async t =>
-                {
-                    if(t.Source != State.idle || t.Trigger == Command.start)
-                        await Usage(t.Parameters.First() as Message);
-                })
+                .OnEntryFromAsync(Command.start, t => t.Source != State.idle 
+                    ? Usage(t.Parameters.First() as Message)
+                    : Task.CompletedTask)
+                
                 .Permit(Command.inline, State.inline);
 
             var inline = _machine.Configure(State.inline)
@@ -300,8 +312,7 @@ namespace Bot.Services
         }
 
         private StateMachine.TriggerWithParameters<Message, CallbackQuery> Param(params Command[] command) => 
-            _params.FirstOrDefault(p =>
-                    command.Any(c => p.Key == c)).Value;
+            _params.FirstOrDefault(p => command.Any(c => p.Key == c)).Value;
         
         #endregion
     }
