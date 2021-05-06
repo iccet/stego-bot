@@ -21,9 +21,6 @@
     <data name="Start" xml:space="preserve">
         <value>Start working with a bot with a reset state </value>
     </data>
-    <data name="Inline" xml:space="preserve">
-        <value>Enter inline mode </value>
-    </data>
     <data name="Encode" xml:space="preserve">
         <value>Encode data</value>
     </data>

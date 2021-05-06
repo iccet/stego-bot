@@ -14,9 +14,6 @@
     <data name="Start" xml:space="preserve">
         <value>Начать работу с ботом со сброшенным состоянием</value>
     </data>
-    <data name="Inline" xml:space="preserve">
-        <value>Войти в inline режим</value>
-    </data>
     <data name="Encode" xml:space="preserve">
         <value>Сокрыть данные</value>
     </data>

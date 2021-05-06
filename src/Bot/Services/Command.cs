@@ -7,7 +7,6 @@ namespace Bot.Services
     public enum Command
     {
         Start,
-        Inline,
         Encode,
         Decode,
         Help,

@@ -44,65 +44,24 @@ namespace Bot.Services {
                 resourceCulture = value;
             }
         }
-        
-        internal static string UnauthorizedStatusMsg {
-            get {
-                return ResourceManager.GetString("UnauthorizedStatusMsg", resourceCulture);
-            }
-        }
-        
-        internal static string AuthorizedAlertMsg {
-            get {
-                return ResourceManager.GetString("AuthorizedAlertMsg", resourceCulture);
-            }
-        }
-        
-        internal static string DeauthorizedAlertMsg {
-            get {
-                return ResourceManager.GetString("DeauthorizedAlertMsg", resourceCulture);
-            }
-        }
-        
-        internal static string IncorrectTokenMsg {
-            get {
-                return ResourceManager.GetString("IncorrectTokenMsg", resourceCulture);
-            }
-        }
-        
-        internal static string SendTokenMsg {
-            get {
-                return ResourceManager.GetString("SendTokenMsg", resourceCulture);
-            }
-        }
-        
-        internal static string Dialogue {
-            get {
-                return ResourceManager.GetString("Dialogue", resourceCulture);
-            }
-        }
-        
+
         internal static string Choose {
             get {
                 return ResourceManager.GetString("Choose", resourceCulture);
             }
         }
-        
-        internal static string SubscribeOnMsg {
+
+        internal static string Guess {
             get {
-                return ResourceManager.GetString("SubscribeOnMsg", resourceCulture);
+                return ResourceManager.GetString("Guess", resourceCulture);
+            }
+        }
+
+        internal static string UploadSource {
+            get {
+                return ResourceManager.GetString("UploadSource", resourceCulture);
             }
         }
         
-        internal static string UnsubscibeFromMsg {
-            get {
-                return ResourceManager.GetString("UnsubscibeFromMsg", resourceCulture);
-            }
-        }
-        
-        internal static string ErrorMsg {
-            get {
-                return ResourceManager.GetString("ErrorMsg", resourceCulture);
-            }
-        }
     }
 }

@@ -6,9 +6,8 @@ namespace Bot.Services
     public enum State
     {
         Idle,
-        Inline,
+        Encode,
+        Decode,
         Source,
-        Alg,
-        Data,
     }
 }

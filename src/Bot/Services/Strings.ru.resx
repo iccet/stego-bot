@@ -12,6 +12,12 @@
         <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
     </resheader>
     <data name="Choose" xml:space="preserve">
-        <value>Выберете оповещения</value>
+        <value>Выберете алгоритм</value>
+    </data>
+    <data name="Guess" xml:space="preserve">
+        <value>Угадать</value>
+    </data>
+    <data name="UploadSource" xml:space="preserve">
+        <value>Загрузите исходник</value>
     </data>
 </root>

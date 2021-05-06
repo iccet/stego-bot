@@ -7,6 +7,7 @@ using Api.Extensions;
 using Bot.Interfaces;
 using Bot.Services;
 using Core.Interfaces;
+using CsStg;
 using Data;
 using Data.Analytics;
 using Microsoft.AspNetCore.Builder;
@@ -69,6 +70,9 @@ namespace Api
             
             services.AddSingleton<ITelegramBotClient>(provider => 
                 new TelegramBotClient(Configuration["TELEGRAM_TOKEN"]));
+
+            services.AddSingleton<AbstractEncoder, Lsb>();
+            services.AddSingleton<AbstractEncoder, Kutter>();
 
             services.AddHostedService<TelegramConsumer>();
 

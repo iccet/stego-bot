@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Interfaces;
 using Bot.Types;
+using CsStg;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -41,6 +43,7 @@ namespace Bot.Services
 
         private readonly StateMachine _machine;
         private readonly Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>> _params;
+        private readonly Dictionary<string, AbstractEncoder> _encoders;
         private readonly ITelegramBotClient _client;
         private readonly IDistributedCache _cache;
         private readonly ILogger<IPostService> _logger;
@@ -78,17 +81,18 @@ namespace Bot.Services
         public TelegramConsumer(
             ITelegramBotClient client,
             ILogger<IPostService> logger,
-            IDistributedCache cache)
+            IDistributedCache cache,
+            IEnumerable<AbstractEncoder> encoders)
         {
             _commandDocs = new Dictionary<Command, DocString>
             {
                 {Command.Help, () => Commands.Help},
-                {Command.Inline, () => Commands.Inline},
                 {Command.Start, () => Commands.Start},
                 {Command.Encode, () => Commands.Encode},
                 {Command.Input, () => Commands.Input},
                 {Command.Decode, () => Commands.Decode},
             };
+            _encoders = encoders.ToDictionary(e => e.GetType().Name, e => e);
             _machine = new StateMachine(State.Idle);
             _params = new Dictionary<Command, StateMachine.TriggerWithParameters<Message, CallbackQuery>>();
             _client = client;
@@ -218,24 +222,40 @@ namespace Bot.Services
 
         #region Actions
 
-        private Task SendReplyKeyboard(Message message)
+        private static IEnumerable<IEnumerable<T>> Partition<T>(IEnumerable<T> e, int p)
         {
-            var replyKeyboardMarkup = new ReplyKeyboardMarkup(
-                new[]
+            var enumerator = e.GetEnumerator();
+            int i = 0;
+            while (enumerator.MoveNext())
+            {
+                yield return e.Skip(p * i++).Take(p);
+            }
+        }
+        private Task SendAlgorithmsKeyboard(Message message, CallbackQuery callbackQuery)
+        {
+            var buttons = _encoders.Keys.Select(k => InlineKeyboardButton.WithCallbackData(k, 
+                JsonSerializer.Serialize(
+                new Callback
                 {
-                    new[] { KeyboardButton.WithRequestLocation("Location"), "1" },
-                    new[] { KeyboardButton.WithRequestContact("Contact"), "2" },
-                },
-                true
-            );
-
-            return _client.SendTextMessageAsync(message.Chat.Id, Strings.Choose, replyMarkup: replyKeyboardMarkup);
+                    Command = Command.Input,
+                    Id = Guid.NewGuid()
+                
+                })));
+            var layout = Partition(buttons, 2).ToList();
+            
+            layout.Add(new [] {InlineKeyboardButton.WithCallbackData(Strings.Guess)});
+            
+            var markup = new InlineKeyboardMarkup(layout);
+            
+            return _client.SendTextMessageAsync(message.Chat.Id, Strings.Choose, replyMarkup: markup);
         }
 
-        private async Task SendDocument(Message message)
+        private async Task SendDocument(Message message, CallbackQuery callbackQuery)
         {
-            await _client.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
+            await _client.AnswerCallbackQueryAsync(callbackQuery.Id, Strings.UploadSource);
 
+            await _client.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
+            
             const string filePath = @"Files/tux.png";
             await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
@@ -251,7 +271,7 @@ namespace Bot.Services
                 _commandDocs[t]())));
         }
         
-        private Task Usage(Message message)
+        private Task Usage(Message message, CallbackQuery query)
         {
             return Usage(message, BuildDoc(_machine.PermittedTriggers));
         }
@@ -262,11 +282,12 @@ namespace Bot.Services
         }
         #endregion
 
-        private async Task Input(CallbackQuery query)
+        private Task ChooseAlg(CallbackQuery query)
         {
             var callback = JsonSerializer.Deserialize<Callback>(query.Data);
+            _logger.LogInformation(query.Data);
 
-            await _client.AnswerCallbackQueryAsync(query.Id);
+            return _client.AnswerCallbackQueryAsync(query.Id);
         }
         #endregion
 
@@ -295,28 +316,25 @@ namespace Bot.Services
             
             var idle = _machine.Configure(State.Idle)
                 .PermitReentry(Command.Start)
-                .PermitReentry(Command.Input)
-                .OnEntryFrom(Param(Command.Start), (message, query) => Usage(message))
-                
-                .Permit(Command.Inline, State.Inline);
+                .OnEntryFromAsync(Param(Command.Start), Usage)
+                .Permit(Command.Decode, State.Decode)
+                .Permit(Command.Encode, State.Encode);
 
-            var inline = _machine.Configure(State.Inline)
-                .OnEntryFromAsync(Param(Command.Inline), 
-                    async (m, q) => await SendReplyKeyboard(m));
+            var encoding = _machine.Configure(State.Encode)
+                .OnEntryFromAsync(Param(Command.Decode), (m, q) => ChooseAlg(q));
 	
-            var encoding = _machine.Configure(State.Source)
-                .PermitReentry(Command.Input)
-                .PermitReentry(Command.Encode)
-                .PermitReentry(Command.Decode)
-                .OnEntryFromAsync(Param(Command.Input), 
-                    async (m, q) => await Input(q));
+            var decoding = _machine.Configure(State.Decode)
+                .Permit(Command.Input, State.Source)
+                .OnEntryFromAsync(Param(Command.Decode), SendAlgorithmsKeyboard);
 	
-            var common = new[] {encoding, inline, idle};
+            var source = _machine.Configure(State.Source)
+                .OnEntryFromAsync(Param(Command.Input), SendDocument);
+	
+            var common = new[] {encoding, source, decoding, idle};
             foreach (var conf in common)
             {
                 conf.PermitReentry(Command.Help)
-                    .OnEntryFrom(Param(Command.Help),
-                        async (message, query) => await Usage(message));
+                    .OnEntryFromAsync(Param(Command.Help), Usage);
             }
             
             foreach (var conf in common.Take(common.Length - 1))

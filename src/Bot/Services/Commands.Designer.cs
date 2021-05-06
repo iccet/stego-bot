@@ -51,12 +51,6 @@ namespace Bot.Services {
             }
         }
         
-        internal static string Inline {
-            get {
-                return ResourceManager.GetString("Inline", resourceCulture);
-            }
-        }
-        
         internal static string Encode {
             get {
                 return ResourceManager.GetString("Encode", resourceCulture);
