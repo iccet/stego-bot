@@ -1,9 +1,12 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Threading.Channels;
 using Api.Extensions;
+using Bot;
 using Bot.Interfaces;
 using Bot.Services;
 using Core.Interfaces;
@@ -73,6 +76,15 @@ namespace Api
 
             services.AddSingleton<AbstractEncoder, Lsb>();
             services.AddSingleton<AbstractEncoder, Kutter>();
+            
+            services.AddHostedService<QueuedHostedService>();
+            services.AddSingleton<IBackgroundTaskQueue>(ctx => {
+                if (!int.TryParse(Configuration["QueueCapacity"], out var queueCapacity))
+                    queueCapacity = 100;
+                return new TelegramTaskQueue(queueCapacity);
+            });
+
+            services.AddTransient<StateManager>();
 
             services.AddHostedService<TelegramConsumer>();
 

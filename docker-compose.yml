@@ -1,0 +1,23 @@
+version: "2"
+
+services:
+
+  stego-bot:
+    container_name: stego-bot
+    build: .
+    ports:
+      - "${BACKEND_PORT:-80}:80"
+    depends_on:
+      - rabbitmq
+      - cache
+    environment:
+      - DATABASE_CONNECTION_STRING=Server=database;Port=5432;Database=stego;User Id=stego;Password=Q12345q; Include Error Detail=true;
+      - REDIS_CONNECTION_STRING=cache,password=Q12345q
+      - TELEGRAM_TOKEN=$TELEGRAM_TOKEN
+    restart: always
+    networks:
+      - stegobot
+
+networks:
+  stegobot:
+    driver: bridge
