@@ -2,51 +2,51 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Interfaces;
 using Bot.Services;
-using CsStg;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InputFiles;
-using Telegram.Bot.Types.ReplyMarkups;
-using StateMachine = Stateless.StateMachine<Bot.Services.State, Bot.Services.Command>;
 
 namespace Bot
 {
-    public class StateManager
+    using StateMachine = Stateless.StateMachine<State, Command>;
+    
+    using MessageTrigger = Stateless.StateMachine<State, Command>
+        .TriggerWithParameters<Message>;
+
+    using CallbackTrigger = Stateless.StateMachine<State, Command>
+        .TriggerWithParameters<CallbackQuery>;
+
+    public class StateManager : IStateManager
     {
         private delegate string StateKey(Message message);
-        private readonly StateKey _stateKey = message => message.From.Id.ToString();
+        private readonly StateKey _stateKey = message => message.Chat.Id.ToString();
         
         private readonly IDistributedCache _cache;
-        private readonly ITelegramBotClient _client;
         private readonly ILogger<StateManager> _logger;
-        private readonly DocBuilder _doc;
-        private readonly Dictionary<string, AbstractEncoder> _encoders;
-        private readonly List<StateMachine.TriggerWithParameters<Message>> _messageTriggers;
-        private readonly List<StateMachine.TriggerWithParameters<CallbackQuery>> _callbackTriggers;
+        private readonly List<MessageTrigger> _messageTriggers;
+        private readonly List<CallbackTrigger> _callbackTriggers;
+        private readonly IDocBuilder _doc;
 
         private StateMachine _machine;
-        
+        private readonly IWorkflow _workflow;
+
         public StateManager(
             IDistributedCache cache,
-            ITelegramBotClient client,
             ILogger<StateManager> logger,
-            IEnumerable<AbstractEncoder> encoders)
+            IWorkflow workflow, 
+            IDocBuilder doc)
         {
             _cache = cache;
-            _client = client;
             _logger = logger;
-            _doc = new DocBuilder();
-            _encoders = encoders.ToDictionary(e => e.GetType().Name, e => e);
+            _workflow = workflow;
+            _doc = doc;
             _messageTriggers = new List<StateMachine.TriggerWithParameters<Message>>();
             _callbackTriggers = new List<StateMachine.TriggerWithParameters<CallbackQuery>>();
         }
@@ -59,7 +59,6 @@ namespace Bot
                 out var state)) state = State.Idle;
             
             _machine = new StateMachine(state);
-            ConfigureTriggerParameters(_messageTriggers);
             ConfigureStateMachine(_machine);
         }
         
@@ -69,103 +68,27 @@ namespace Bot
             _cache.SetString(id, _machine.State.ToString());
         }
 
-        #region Actions
-
-        private static IEnumerable<IEnumerable<T>> Partition<T>(IEnumerable<T> e, int p)
+        public async ValueTask OnCallbackQueryReceived(
+            object sender,
+            EventArgs callbackQueryEventArgs,
+            CancellationToken token)
         {
-            var enumerator = e.GetEnumerator();
-            int i = 0;
-            while (enumerator.MoveNext())
+            Debug.Assert(_machine != null);
+            Debug.Assert(callbackQueryEventArgs is CallbackQueryEventArgs);
+            
+            var args = (CallbackQueryEventArgs) callbackQueryEventArgs;
+            var query = args.CallbackQuery;
+            
+            try
             {
-                yield return e.Skip(p * i++).Take(p);
+                var param = CallBackTrigger(Command.Input);
+                await _machine.FireAsync(param, query);
             }
-        }
-        
-        private Task SendAlgorithmsKeyboard(Message message)
-        {
-            var buttons = _encoders.Keys.Select(k => InlineKeyboardButton.WithCallbackData(k, 
-                JsonSerializer.Serialize(
-                new Callback
-                {
-                    Command = Command.Input,
-                    Id = Guid.NewGuid()
-                
-                })));
-            var layout = Partition(buttons, 2).ToList();
-            
-            layout.Add(new [] {InlineKeyboardButton.WithCallbackData(Strings.Guess)});
-            
-            var markup = new InlineKeyboardMarkup(layout);
-            
-            return _client.SendTextMessageAsync(message.Chat.Id, Strings.Choose, replyMarkup: markup);
-        }
-
-        private async Task SendDocument(CallbackQuery callbackQuery)
-        {
-            await _client.AnswerCallbackQueryAsync(callbackQuery.Id, Strings.UploadSource);
-            await _client.SendTextMessageAsync(callbackQuery.Message.Chat.Id, Strings.UploadSource);
-
-            await _client.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
-            
-            const string filePath = @"Files/tux.png";
-            await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
-            await _client.SendPhotoAsync(callbackQuery.Message.Chat.Id,new InputOnlineFile(fileStream, fileName),"Nice Picture");
-        }
-        
-        #region Usage
-        
-        private Task Usage(Message message)
-        {
-            return Usage(message, _doc.Build(_machine.PermittedTriggers));
-        }
-
-        private Task Usage(Message message, string doc)
-        {
-            return _client.SendTextMessageAsync(message.Chat.Id, doc, replyMarkup: new ReplyKeyboardRemove());
-        }
-        #endregion
-
-        private Task ChooseAlg(CallbackQuery query)
-        {
-            var callback = JsonSerializer.Deserialize<Callback>(query.Data);
-            _logger.LogInformation(query.Data);
-
-            return _client.AnswerCallbackQueryAsync(query.Id);
-        }
-        #endregion
-        
-        private void ConfigureStateMachine(StateMachine machine)
-        {
-            var idle = machine.Configure(State.Idle)
-                .PermitReentry(Command.Start)
-                .OnEntryFromAsync(MessageTrigger(Command.Start), Usage)
-                .Permit(Command.Decode, State.Decode)
-                .Permit(Command.Encode, State.Encode);
-
-            var encoding = machine.Configure(State.Encode)
-                // .OnEntryFromAsync(CallBackTrigger(Command.Decode), ChooseAlg)
-                ;
-	
-            var decoding = machine.Configure(State.Decode)
-                .Permit(Command.Input, State.Source)
-                .OnEntryFromAsync(MessageTrigger(Command.Decode), SendAlgorithmsKeyboard);
-	
-            var source = machine.Configure(State.Source)
-                // .OnEntryFromAsync(CallBackTrigger(Command.Input), SendDocument)
-                ;
-	
-            var common = new[] {encoding, source, decoding, idle};
-            foreach (var conf in common)
+            catch (Exception e)
             {
-                conf.PermitReentry(Command.Help)
-                    .OnEntryFromAsync(MessageTrigger(Command.Help), Usage);
+                _logger.LogError(e, e.Message);
             }
-            
-            foreach (var conf in common.Take(common.Length - 1))
-            {
-                conf.Permit(Command.Start, State.Idle);
-            }
+            SaveState(query.Message);
         }
         
         public async ValueTask OnMessageReceived(
@@ -173,6 +96,7 @@ namespace Bot
             EventArgs messageEventArgs, 
             CancellationToken token)
         {
+            Debug.Assert(_machine != null);
             Debug.Assert(messageEventArgs is MessageEventArgs);
             
             var args = (MessageEventArgs) messageEventArgs;
@@ -184,17 +108,10 @@ namespace Bot
                 {"Event", nameof(OnMessageReceived)}
             };
 
-            Commands.Culture = CultureInfo.GetCultureInfo(
-#if  DEBUG
-            "ru"      
-#else
-            messageEventArgs.Message.From.LanguageCode
-#endif
-            );
-
             if (message == null || message.Type != MessageType.Text) return;
 
             var command = ParseMessage(message.Text);
+            
             var param = MessageTrigger(command);
 
             using (_logger.BeginScope(scope))
@@ -205,11 +122,32 @@ namespace Bot
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Error state firing {Error}", e.Message);
+                    _logger.LogError(e, "Error state firing {Trigger}", param.Trigger);
                 }
                 _logger.LogInformation("Current state {State}", _machine.State);
             }
             SaveState(message);
+        }
+
+        private void SetLocale(Message message)
+        {
+            var locale = CultureInfo.GetCultureInfo(
+#if  DEBUG
+            "ru"      
+#else
+            message.From.LanguageCode
+#endif
+            );
+            
+            Commands.Culture = locale;
+            Strings.Culture = locale;
+            
+            _logger.LogInformation("Set locale to {Locale}", locale.Name);
+        }
+
+        private void SetLocale(CallbackQuery query)
+        {
+            SetLocale(query.Message);
         }
 
         private Command ParseMessage(string text)
@@ -227,11 +165,58 @@ namespace Bot
         }
 
         private void ConfigureTriggerParameters<T>(
-            List<StateMachine.TriggerWithParameters<T>> triggers)
+            List<StateMachine.TriggerWithParameters<T>> triggers, params Command[] command)
         {
-            var commands = Enum.GetValues(typeof(Command)) as Command[];
-            triggers.AddRange(commands!.Select(_machine.SetTriggerParameters<T>));
+            triggers.AddRange(command!.Select(_machine.SetTriggerParameters<T>));
         }
+
+        private Task Usage(Message message)
+        {
+            return _workflow.Usage(message, _doc.Build(_machine.PermittedTriggers));
+        }
+        
+        private void ConfigureStateMachine(StateMachine machine)
+        {
+            ConfigureTriggerParameters(_messageTriggers, 
+                Command.Help,
+                Command.Start,
+                Command.Decode);
+            
+            ConfigureTriggerParameters(_callbackTriggers,
+                Command.Input);
+            
+            var idle = machine.Configure(State.Idle)
+                .PermitReentry(Command.Start)
+                .OnEntryFromAsync(MessageTrigger(Command.Start), Usage)
+                .Permit(Command.Decode, State.Decode)
+                .Permit(Command.Encode, State.Encode);
+
+            var encoding = machine.Configure(State.Encode)
+                // .OnEntryFromAsync(CallBackTrigger(Command.Decode), ChooseAlg)
+                ;
+	
+            var decoding = machine.Configure(State.Decode)
+                .Permit(Command.Input, State.Source)
+                .OnEntryFromAsync(MessageTrigger(Command.Decode), _workflow.SendAlgorithmsList);
+	
+            var source = machine.Configure(State.Source)
+                .OnEntryFromAsync(CallBackTrigger(Command.Input), _workflow.SendDocument)
+                ;
+
+            var common = new[] {encoding, source, decoding, idle};
+            foreach (var conf in common)
+            {
+                conf.PermitReentry(Command.Help)
+                    .OnEntryFrom(MessageTrigger(Command.Help), SetLocale)
+                    .OnEntryFromAsync(MessageTrigger(Command.Help), Usage);
+            }
+            
+            foreach (var conf in common.Take(common.Length - 1))
+            {
+                conf.Permit(Command.Start, State.Idle);
+            }
+        }
+        
 
         private StateMachine.TriggerWithParameters<CallbackQuery> CallBackTrigger(params Command[] command)
         {

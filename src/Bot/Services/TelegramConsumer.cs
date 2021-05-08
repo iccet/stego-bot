@@ -1,40 +1,26 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Interfaces;
 using Bot.Types;
-using CsStg;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Telegram.Bot;
 using Telegram.Bot.Args;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
-using Telegram.Bot.Types.InputFiles;
-using Telegram.Bot.Types.ReplyMarkups;
-using StateMachine = Stateless.StateMachine<Bot.Services.State, Bot.Services.Command>;
 
 namespace Bot.Services
 {
+    using StateMachine = Stateless.StateMachine<State, Command>;
+    
     public sealed class TelegramConsumer : IPostService, IHostedService
     {
-        
         #region Fields
-        private readonly Dictionary<string, AbstractEncoder> _encoders;
+        
         private readonly ITelegramBotClient _client;
-        private readonly IDistributedCache _cache;
         private readonly ILogger<IPostService> _logger;
-        private readonly DocBuilder _doc;
         private readonly IBackgroundTaskQueue _taskQueue;
         private readonly IServiceProvider _provider;
         private bool _disposed;
@@ -69,16 +55,11 @@ namespace Bot.Services
         public TelegramConsumer(
             ITelegramBotClient client,
             ILogger<IPostService> logger,
-            IDistributedCache cache,
-            IEnumerable<AbstractEncoder> encoders,
             IBackgroundTaskQueue taskQueue, 
             IServiceProvider provider)
         {
-            _encoders = encoders.ToDictionary(e => e.GetType().Name, e => e);
-            _doc = new DocBuilder();
             _client = client;
             _logger = logger;
-            _cache = cache;
             _taskQueue = taskQueue;
             _provider = provider;
         }
@@ -117,7 +98,7 @@ namespace Bot.Services
 
         private async void OnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
-            var manager = _provider.GetRequiredService<StateManager>();
+            var manager = _provider.GetRequiredService<IStateManager>();
             manager.RestoreState(messageEventArgs.Message);
             
             await _taskQueue.QueueAsync(manager.OnMessageReceived, sender, messageEventArgs);
@@ -125,17 +106,10 @@ namespace Bot.Services
 
         private async void OnCallbackQueryReceived(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
         {
-            var query = callbackQueryEventArgs.CallbackQuery;
-            var machine = new StateMachine(State.Idle);
-            try
-            {
-                // var param = Param(Command.Input);
-                // await machine.FireAsync(param, null, query);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e.Message);
-            }
+            var manager = _provider.GetRequiredService<IStateManager>();
+            manager.RestoreState(callbackQueryEventArgs.CallbackQuery.Message);
+            
+            await _taskQueue.QueueAsync(manager.OnCallbackQueryReceived, sender, callbackQueryEventArgs);
         }
         
         private async void OnInlineQueryReceived(object sender, InlineQueryEventArgs inlineQueryEventArgs)

@@ -1,15 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Telegram.Bot;
-using Telegram.Bot.Args;
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
-using StateMachine = Stateless.StateMachine<Bot.Services.State, Bot.Services.Command>;
+using Bot.Interfaces;
 
 namespace Bot.Services
 {
-    public class DocBuilder
+    public class DocBuilder : IDocBuilder
     {
         private delegate string DocString();
         private readonly Dictionary<Command, DocString> _commandDocs;
@@ -34,6 +29,5 @@ namespace Bot.Services
                 t.ToString("G").ToLower(),
                 _commandDocs[t]())));
         }
-
     }
 }

@@ -84,7 +84,9 @@ namespace Api
                 return new TelegramTaskQueue(queueCapacity);
             });
 
-            services.AddTransient<StateManager>();
+            services.AddTransient<IDocBuilder, DocBuilder>();
+            services.AddTransient<IWorkflow, Workflow>();
+            services.AddTransient<IStateManager, StateManager>();
 
             services.AddHostedService<TelegramConsumer>();
 
