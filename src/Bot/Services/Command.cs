@@ -9,7 +9,8 @@ namespace Bot.Services
         Encode,
         Decode,
         Help,
-        ChooseAlg,
+        AlgList,
+        SetAlg,
         UploadSource
     }
 }

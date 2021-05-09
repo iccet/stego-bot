@@ -90,7 +90,7 @@ namespace Bot
             
             try
             {
-                var param = CallBackTrigger(Command.ChooseAlg);
+                var param = CallBackTrigger(Command.SetAlg);
                 
                 _state.Callback = JsonSerializer.Deserialize<Callback>(query.Data);
                 await _machine.FireAsync(param, query);
@@ -169,9 +169,7 @@ namespace Bot
                 .First()[1..]
                 .Trim(), true, out Command command);
 
-            if (!parsed) return Command.ChooseAlg;
-
-            return _machine.CanFire(command) 
+            return parsed && _machine.CanFire(command) 
                 ? command 
                 : Command.Help;
         }
@@ -184,7 +182,7 @@ namespace Bot
 
         private Task Usage(Message message)
         {
-            return _workflow.Usage(message, _doc.Build(_machine.PermittedTriggers));
+            return _workflow.Usage(message, _doc.Build(_machine));
         }
         
         private void ConfigureStateMachine(StateMachine machine)
@@ -192,16 +190,16 @@ namespace Bot
             ConfigureTriggerParameters(_messageTriggers, 
                 Command.Help,
                 Command.Start,
+                Command.AlgList,
                 Command.UploadSource,
                 Command.Decode);
             
             ConfigureTriggerParameters(_callbackTriggers,
-                Command.ChooseAlg);
+                Command.SetAlg);
             
             var idle = machine.Configure(State.Idle)
                 .PermitReentry(Command.Start)
                 .OnEntryFromAsync(MessageTrigger(Command.Start), Usage)
-                .OnEntryFromAsync(MessageTrigger(Command.UploadSource), _workflow.DecodeSource)
                 .Permit(Command.Decode, State.Decode)
                 .Permit(Command.Encode, State.Encode);
 
@@ -210,9 +208,12 @@ namespace Bot
                 ;
 	
             var decoding = machine.Configure(State.Decode)
-                .PermitReentry(Command.ChooseAlg)
-                .Permit(Command.UploadSource, State.Idle)
-                .OnEntryFromAsync(CallBackTrigger(Command.ChooseAlg), _workflow.RequestSource)
+                .PermitReentry(Command.AlgList)
+                .PermitReentry(Command.SetAlg)
+                .PermitReentry(Command.UploadSource)
+                .OnEntryFromAsync(CallBackTrigger(Command.SetAlg), _workflow.RequestSource)
+                .OnEntryFromAsync(MessageTrigger(Command.UploadSource), _workflow.DecodeSource)
+                .OnEntryFromAsync(MessageTrigger(Command.AlgList), _workflow.SendAlgorithmsList)
                 .OnEntryFromAsync(MessageTrigger(Command.Decode), _workflow.SendAlgorithmsList);
 	
             var common = new[] {encoding, decoding, idle};

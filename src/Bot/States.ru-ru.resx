@@ -11,19 +11,10 @@
     <resheader name="writer">
         <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
     </resheader>
-    <data name="Start" xml:space="preserve">
-        <value>Начать работу с ботом со сброшенным состоянием</value>
-    </data>
-    <data name="Encode" xml:space="preserve">
-        <value>Сокрыть данные</value>
+    <data name="Idle" xml:space="preserve">
+        <value>Стартовая позиция на которую всегда приятно возвращаться</value>
     </data>
     <data name="Decode" xml:space="preserve">
-        <value>Распознать исходник</value>
-    </data>
-    <data name="Help" xml:space="preserve">
-        <value>Показать помощь</value>
-    </data>
-    <data name="Alg" xml:space="preserve">
-        <value>Выбрать алгоритм</value>
+        <value>Твоя задача присылать в меня исходники, а моя их ловить</value>
     </data>
 </root>

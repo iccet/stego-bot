@@ -7,28 +7,28 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Bot.Services {
+namespace Bot {
     using System;
     
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Commands {
+    internal class States {
         
         private static System.Resources.ResourceManager resourceMan;
         
         private static System.Globalization.CultureInfo resourceCulture;
         
         [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Commands() {
+        internal States() {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
         internal static System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.Equals(null, resourceMan)) {
-                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("Bot.Services.Commands", typeof(Commands).Assembly);
+                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("Bot.States", typeof(States).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -45,33 +45,15 @@ namespace Bot.Services {
             }
         }
         
-        internal static string Start {
+        internal static string Idle {
             get {
-                return ResourceManager.GetString("Start", resourceCulture);
-            }
-        }
-        
-        internal static string Encode {
-            get {
-                return ResourceManager.GetString("Encode", resourceCulture);
+                return ResourceManager.GetString("Idle", resourceCulture);
             }
         }
         
         internal static string Decode {
             get {
                 return ResourceManager.GetString("Decode", resourceCulture);
-            }
-        }
-        
-        internal static string Help {
-            get {
-                return ResourceManager.GetString("Help", resourceCulture);
-            }
-        }
-        
-        internal static string Alg {
-            get {
-                return ResourceManager.GetString("Alg", resourceCulture);
             }
         }
     }

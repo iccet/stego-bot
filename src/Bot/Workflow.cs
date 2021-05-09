@@ -36,7 +36,7 @@ namespace Bot
                 JsonSerializer.Serialize(
                 new Callback
                 {
-                    Command = Command.ChooseAlg,
+                    Command = Command.SetAlg,
                     Alg = k
                 
                 })));
@@ -60,25 +60,24 @@ namespace Bot
             await _client.SendTextMessageAsync(message.Chat.Id, Strings.Decoding);
             await _client.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
 
-            foreach (var s in message.Photo)
-            {
-                await using var stream = new MemoryStream();
-                var file = await _client.GetFileAsync(s.FileId);
-                
-                await _client.DownloadFileAsync(file.FilePath, stream);
+            var photoSize = message.Photo.Last();
+            
+            await using var stream = new MemoryStream();
+            var file = await _client.GetFileAsync(photoSize.FileId);
+            
+            await _client.DownloadFileAsync(file.FilePath, stream);
 
-                var bitmap = Image.FromStream(stream);
+            var bitmap = Image.FromStream(stream);
 
-                bitmap.Save(stream, ImageFormat.Png);
-                var bytes = stream.ToArray();
-                
-                var encoder = _encoders.GetValueOrDefault(nameof(Kutter));
+            bitmap.Save(stream, ImageFormat.Png);
+            var bytes = stream.ToArray();
+            
+            var encoder = _encoders.GetValueOrDefault(nameof(Kutter));
 
-                var decoded = encoder.Decode(bytes);
+            var decoded = encoder.Decode(bytes);
 
-                var text = string.IsNullOrEmpty(decoded) ? Errors.Decode : decoded;
-                await _client.SendTextMessageAsync(message.Chat.Id, text);
-            }
+            var text = string.IsNullOrEmpty(decoded) ? Errors.Decode : decoded;
+            await _client.SendTextMessageAsync(message.Chat.Id, text);
         }
 
         public async Task EncodeSource(Message message)

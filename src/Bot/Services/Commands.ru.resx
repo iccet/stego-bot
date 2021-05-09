@@ -23,7 +23,7 @@
     <data name="Decode" xml:space="preserve">
         <value>Распознать исходник</value>
     </data>
-    <data name="Input" xml:space="preserve">
-        <value>Режим ручного ввода</value>
+    <data name="Alg" xml:space="preserve">
+        <value>Выбрать алгоритм</value>
     </data>
 </root>

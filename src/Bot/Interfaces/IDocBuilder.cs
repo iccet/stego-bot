@@ -1,14 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Bot.Services;
-using Telegram.Bot.Types;
 
 namespace Bot.Interfaces
 {
+    using StateMachine = Stateless.StateMachine<State, Command>;
     public interface IDocBuilder
     {
-        string Build(IEnumerable<Command> triggers);
+        string Build(StateMachine machine);
     }
 }
