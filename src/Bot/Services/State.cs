@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Bot.Services
 {
@@ -8,6 +9,11 @@ namespace Bot.Services
         Idle,
         Encode,
         Decode,
-        Source,
+    }
+
+    public struct WorkflowState
+    {
+        public State State { get; set; }
+        public Callback Callback { get; set; }
     }
 }

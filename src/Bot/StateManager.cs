@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Interfaces;
@@ -35,6 +36,7 @@ namespace Bot
         private readonly IDocBuilder _doc;
 
         private StateMachine _machine;
+        private WorkflowState _state;
         private readonly IWorkflow _workflow;
 
         public StateManager(
@@ -54,18 +56,25 @@ namespace Bot
         public void RestoreState(Message message)
         {
             var id = _stateKey.Invoke(message);
+            var cached = _cache.GetString(id);
+            try
+            {
+                _state = JsonSerializer.Deserialize<WorkflowState>(cached);
+            }
+            catch (Exception e) when(e is JsonException || e is ArgumentNullException)
+            {
+                _state = new WorkflowState();
+            }
             
-            if(!Enum.TryParse<State>(_cache.GetString(id),
-                out var state)) state = State.Idle;
-            
-            _machine = new StateMachine(state);
+            _machine = new StateMachine(_state.State);
             ConfigureStateMachine(_machine);
         }
         
         public void SaveState(Message message)
         {
             var id = _stateKey.Invoke(message);
-            _cache.SetString(id, _machine.State.ToString());
+            _state.State = _machine.State;
+            _cache.SetString(id, JsonSerializer.Serialize(_state));
         }
 
         public async ValueTask OnCallbackQueryReceived(
@@ -81,7 +90,9 @@ namespace Bot
             
             try
             {
-                var param = CallBackTrigger(Command.Input);
+                var param = CallBackTrigger(Command.ChooseAlg);
+                
+                _state.Callback = JsonSerializer.Deserialize<Callback>(query.Data);
                 await _machine.FireAsync(param, query);
             }
             catch (Exception e)
@@ -108,9 +119,7 @@ namespace Bot
                 {"Event", nameof(OnMessageReceived)}
             };
 
-            if (message == null || message.Type != MessageType.Text) return;
-
-            var command = ParseMessage(message.Text);
+            var command = ParseMessage(message);
             
             var param = MessageTrigger(command);
 
@@ -150,14 +159,17 @@ namespace Bot
             SetLocale(query.Message);
         }
 
-        private Command ParseMessage(string text)
+        private Command ParseMessage(Message message)
         {
-            var parsed = Enum.TryParse(text
+            if (message.Type == MessageType.Photo) 
+                return Command.UploadSource;
+            
+            var parsed = Enum.TryParse(message.Text
                 .Split(' ')
                 .First()[1..]
                 .Trim(), true, out Command command);
 
-            if (!parsed) return Command.Input;
+            if (!parsed) return Command.ChooseAlg;
 
             return _machine.CanFire(command) 
                 ? command 
@@ -180,14 +192,16 @@ namespace Bot
             ConfigureTriggerParameters(_messageTriggers, 
                 Command.Help,
                 Command.Start,
+                Command.UploadSource,
                 Command.Decode);
             
             ConfigureTriggerParameters(_callbackTriggers,
-                Command.Input);
+                Command.ChooseAlg);
             
             var idle = machine.Configure(State.Idle)
                 .PermitReentry(Command.Start)
                 .OnEntryFromAsync(MessageTrigger(Command.Start), Usage)
+                .OnEntryFromAsync(MessageTrigger(Command.UploadSource), _workflow.DecodeSource)
                 .Permit(Command.Decode, State.Decode)
                 .Permit(Command.Encode, State.Encode);
 
@@ -196,14 +210,12 @@ namespace Bot
                 ;
 	
             var decoding = machine.Configure(State.Decode)
-                .Permit(Command.Input, State.Source)
+                .PermitReentry(Command.ChooseAlg)
+                .Permit(Command.UploadSource, State.Idle)
+                .OnEntryFromAsync(CallBackTrigger(Command.ChooseAlg), _workflow.RequestSource)
                 .OnEntryFromAsync(MessageTrigger(Command.Decode), _workflow.SendAlgorithmsList);
 	
-            var source = machine.Configure(State.Source)
-                .OnEntryFromAsync(CallBackTrigger(Command.Input), _workflow.SendDocument)
-                ;
-
-            var common = new[] {encoding, source, decoding, idle};
+            var common = new[] {encoding, decoding, idle};
             foreach (var conf in common)
             {
                 conf.PermitReentry(Command.Help)

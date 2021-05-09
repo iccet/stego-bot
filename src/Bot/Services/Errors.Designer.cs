@@ -14,21 +14,21 @@ namespace Bot.Services {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Strings {
+    internal class Errors {
         
         private static System.Resources.ResourceManager resourceMan;
         
         private static System.Globalization.CultureInfo resourceCulture;
         
         [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Strings() {
+        internal Errors() {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
         internal static System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.Equals(null, resourceMan)) {
-                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("Bot.Services.Strings", typeof(Strings).Assembly);
+                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("Bot.Services.Errors", typeof(Errors).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -45,27 +45,9 @@ namespace Bot.Services {
             }
         }
         
-        internal static string Choose {
+        internal static string Decode {
             get {
-                return ResourceManager.GetString("Choose", resourceCulture);
-            }
-        }
-        
-        internal static string Guess {
-            get {
-                return ResourceManager.GetString("Guess", resourceCulture);
-            }
-        }
-        
-        internal static string UploadSource {
-            get {
-                return ResourceManager.GetString("UploadSource", resourceCulture);
-            }
-        }
-        
-        internal static string Decoding {
-            get {
-                return ResourceManager.GetString("Decoding", resourceCulture);
+                return ResourceManager.GetString("Decode", resourceCulture);
             }
         }
     }

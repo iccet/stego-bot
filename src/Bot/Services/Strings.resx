@@ -27,4 +27,7 @@
     <data name="UploadSource" xml:space="preserve">
         <value>Upload source</value>
     </data>
+    <data name="Decoding" xml:space="preserve">
+        <value>Solving the hardest puzzle of all time</value>
+    </data>
 </root>

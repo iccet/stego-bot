@@ -6,8 +6,8 @@ namespace Bot
     [Serializable]
     public struct Callback
     {
-        public Guid Id { get; set; }
         public Command Command { get; set; }
+        public string Alg { get; set; }
     }
 
 }

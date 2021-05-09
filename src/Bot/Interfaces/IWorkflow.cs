@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bot.Services;
 using Telegram.Bot.Types;
 
 namespace Bot.Interfaces
@@ -8,7 +6,9 @@ namespace Bot.Interfaces
     public interface IWorkflow
     {
         Task SendAlgorithmsList(Message message);
-        Task SendDocument(CallbackQuery callbackQuery);
+        Task RequestSource(CallbackQuery callbackQuery);
+        Task DecodeSource(Message message);
+        Task EncodeSource(Message message);
         Task Usage(Message message, string doc);
     }
 }

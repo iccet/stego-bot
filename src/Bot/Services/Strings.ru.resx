@@ -20,4 +20,7 @@
     <data name="UploadSource" xml:space="preserve">
         <value>Загрузите исходник</value>
     </data>
+    <data name="Decoding" xml:space="preserve">
+        <value>Разгадываю сложнейший пазл всех времен</value>
+    </data>
 </root>

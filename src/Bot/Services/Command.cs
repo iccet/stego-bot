@@ -9,6 +9,7 @@ namespace Bot.Services
         Encode,
         Decode,
         Help,
-        Input
+        ChooseAlg,
+        UploadSource
     }
 }

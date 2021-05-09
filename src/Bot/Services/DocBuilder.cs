@@ -17,7 +17,7 @@ namespace Bot.Services
                 {Command.Help, () => Commands.Help},
                 {Command.Start, () => Commands.Start},
                 {Command.Encode, () => Commands.Encode},
-                {Command.Input, () => Commands.Input},
+                {Command.ChooseAlg, () => Commands.Input},
                 {Command.Decode, () => Commands.Decode},
             };
         }

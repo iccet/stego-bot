@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -12,7 +14,6 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
-using StateMachine = Stateless.StateMachine<Bot.Services.State, Bot.Services.Command>;
 
 namespace Bot
 {
@@ -35,8 +36,8 @@ namespace Bot
                 JsonSerializer.Serialize(
                 new Callback
                 {
-                    Command = Command.Input,
-                    Id = Guid.NewGuid()
+                    Command = Command.ChooseAlg,
+                    Alg = k
                 
                 })));
             var layout = Partition(buttons, 2).ToList();
@@ -48,18 +49,90 @@ namespace Bot
             return _client.SendTextMessageAsync(message.Chat.Id, Strings.Choose, replyMarkup: markup);
         }
 
-        public async Task SendDocument(CallbackQuery callbackQuery)
+        public async Task RequestSource(CallbackQuery callbackQuery)
         {
             await _client.AnswerCallbackQueryAsync(callbackQuery.Id, Strings.UploadSource);
             await _client.SendTextMessageAsync(callbackQuery.Message.Chat.Id, Strings.UploadSource);
-
-            await _client.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
-            
-            const string filePath = @"Files/tux.png";
-            await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
-            await _client.SendPhotoAsync(callbackQuery.Message.Chat.Id,new InputOnlineFile(fileStream, fileName),"Nice Picture");
         }
+
+        public async Task DecodeSource(Message message)
+        {
+            await _client.SendTextMessageAsync(message.Chat.Id, Strings.Decoding);
+            await _client.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
+
+            foreach (var s in message.Photo)
+            {
+                await using var stream = new MemoryStream();
+                var file = await _client.GetFileAsync(s.FileId);
+                
+                await _client.DownloadFileAsync(file.FilePath, stream);
+
+                var bitmap = Image.FromStream(stream);
+
+                bitmap.Save(stream, ImageFormat.Png);
+                var bytes = stream.ToArray();
+                
+                var encoder = _encoders.GetValueOrDefault(nameof(Kutter));
+
+                var decoded = encoder.Decode(bytes);
+
+                var text = string.IsNullOrEmpty(decoded) ? Errors.Decode : decoded;
+                await _client.SendTextMessageAsync(message.Chat.Id, text);
+            }
+        }
+
+        public async Task EncodeSource(Message message)
+        {
+            await _client.SendTextMessageAsync(message.Chat.Id, Strings.Decoding);
+            await _client.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
+
+            foreach (var s in message.Photo)
+            {
+                await using var stream = new MemoryStream();
+                var file = await _client.GetFileAsync(s.FileId);
+                
+                await _client.DownloadFileAsync(file.FilePath, stream);
+
+                var bitmap = Image.FromStream(stream);
+
+                bitmap.Save(stream, ImageFormat.Png);
+                var bytes = stream.ToArray();
+                
+                var encoder = _encoders.GetValueOrDefault("Lsb");
+                encoder.Decode(bytes);
+
+
+            }
+            // Message[] messages;
+            // await using (Stream
+            //     stream1 = System.IO.File.OpenRead(Constants.PathToFile.Photos.Logo),
+            //     stream2 = System.IO.File.OpenRead(Constants.PathToFile.Photos.Bot)
+            // )
+            // {
+            //     IAlbumInputMedia[] inputMedia =
+            //     {
+            //         new InputMediaPhoto(new InputMedia(stream1, "logo.png"))
+            //         {
+            //             Caption = "Logo"
+            //         },
+            //         new InputMediaPhoto(new InputMedia(stream2, "bot.gif"))
+            //         {
+            //             Caption = "Bot"
+            //         },
+            //     };
+            //
+            //     messages = await BotClient.SendMediaGroupAsync(
+            //         /* chatId: */ _fixture.SupergroupChat.Id,
+            //         /* inputMedia: */ inputMedia,
+            //         /* disableNotification: */ true
+            //     );
+            // }
+
+            
+            // const string filePath = @"Files/tux.png";
+            // await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+        
         
         public Task Usage(Message message, string doc)
         {

@@ -11,16 +11,7 @@
     <resheader name="writer">
         <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
     </resheader>
-    <data name="Choose" xml:space="preserve">
-        <value>Выберете алгоритм</value>
-    </data>
-    <data name="Guess" xml:space="preserve">
-        <value>Угадать</value>
-    </data>
-    <data name="UploadSource" xml:space="preserve">
-        <value>Загрузите исходник</value>
-    </data>
-    <data name="Decoding" xml:space="preserve">
-        <value>Разгадываю сложнейший пазл всех времен</value>
+    <data name="Decode" xml:space="preserve">
+        <value>Mне очень жаль, но у меня не получилось декодировать </value>
     </data>
 </root>
