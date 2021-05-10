@@ -21,4 +21,7 @@
     <data name="Decode" xml:space="preserve">
         <value>I'm sorry, but I couldn't decode </value>
     </data>
+    <data name="Encode" xml:space="preserve">
+        <value>Listen, something went wrong ...</value>
+    </data>
 </root>

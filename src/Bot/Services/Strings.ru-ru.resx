@@ -23,4 +23,7 @@
     <data name="Decoding" xml:space="preserve">
         <value>Разгадываю сложнейший пазл всех времен</value>
     </data>
+    <data name="Encoding" xml:space="preserve">
+        <value>Вшиваю твои секретики в свои карманы </value>
+    </data>
 </root>

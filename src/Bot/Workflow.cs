@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bot.Interfaces;
@@ -12,7 +13,6 @@ using CsStg;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Bot
@@ -67,14 +67,10 @@ namespace Bot
             
             await _client.DownloadFileAsync(file.FilePath, stream);
 
-            var bitmap = Image.FromStream(stream);
-
-            bitmap.Save(stream, ImageFormat.Png);
-            var bytes = stream.ToArray();
+            var bitmap = new Bitmap(stream);
             
-            var encoder = _encoders.GetValueOrDefault(nameof(Kutter));
-
-            var decoded = encoder.Decode(bytes);
+            var encoder = _encoders.GetValueOrDefault(nameof(Lsb));
+            var decoded = encoder.Decode(bitmap);
 
             var text = string.IsNullOrEmpty(decoded) ? Errors.Decode : decoded;
             await _client.SendTextMessageAsync(message.Chat.Id, text);
@@ -82,54 +78,32 @@ namespace Bot
 
         public async Task EncodeSource(Message message)
         {
-            await _client.SendTextMessageAsync(message.Chat.Id, Strings.Decoding);
+            await _client.SendTextMessageAsync(message.Chat.Id, Strings.Encoding);
             await _client.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
 
-            foreach (var s in message.Photo)
-            {
-                await using var stream = new MemoryStream();
-                var file = await _client.GetFileAsync(s.FileId);
-                
-                await _client.DownloadFileAsync(file.FilePath, stream);
-
-                var bitmap = Image.FromStream(stream);
-
-                bitmap.Save(stream, ImageFormat.Png);
-                var bytes = stream.ToArray();
-                
-                var encoder = _encoders.GetValueOrDefault("Lsb");
-                encoder.Decode(bytes);
-
-
-            }
-            // Message[] messages;
-            // await using (Stream
-            //     stream1 = System.IO.File.OpenRead(Constants.PathToFile.Photos.Logo),
-            //     stream2 = System.IO.File.OpenRead(Constants.PathToFile.Photos.Bot)
-            // )
-            // {
-            //     IAlbumInputMedia[] inputMedia =
-            //     {
-            //         new InputMediaPhoto(new InputMedia(stream1, "logo.png"))
-            //         {
-            //             Caption = "Logo"
-            //         },
-            //         new InputMediaPhoto(new InputMedia(stream2, "bot.gif"))
-            //         {
-            //             Caption = "Bot"
-            //         },
-            //     };
-            //
-            //     messages = await BotClient.SendMediaGroupAsync(
-            //         /* chatId: */ _fixture.SupergroupChat.Id,
-            //         /* inputMedia: */ inputMedia,
-            //         /* disableNotification: */ true
-            //     );
-            // }
-
+            var photoSize = message.Photo.Last();
+            await using var originalStream = new MemoryStream();
+            var stream = new MemoryStream();
+            var file = await _client.GetFileAsync(photoSize.FileId);
             
-            // const string filePath = @"Files/tux.png";
-            // await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await _client.DownloadFileAsync(file.FilePath, originalStream);
+
+            var bitmap = new Bitmap(originalStream);
+
+            var encoder = _encoders.GetValueOrDefault(nameof(Lsb));
+            const string data = "Богет, богет";
+            var success = encoder.Encode(data, bitmap, stream);
+            
+            if (success)
+            {
+                await _client.SendPhotoAsync(message.Chat.Id, stream, data);
+            }
+            else
+            {
+                await _client.SendTextMessageAsync(message.Chat.Id, Errors.Encode);
+            }
+            
+            
         }
         
         

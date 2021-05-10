@@ -10,6 +10,7 @@ using Bot.Interfaces;
 using Bot.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -30,25 +31,28 @@ namespace Bot
         private readonly StateKey _stateKey = message => message.Chat.Id.ToString();
         
         private readonly IDistributedCache _cache;
+        private readonly DistributedCacheEntryOptions _options;
         private readonly ILogger<StateManager> _logger;
         private readonly List<MessageTrigger> _messageTriggers;
         private readonly List<CallbackTrigger> _callbackTriggers;
         private readonly IDocBuilder _doc;
+        private readonly IWorkflow _workflow;
 
         private StateMachine _machine;
         private WorkflowState _state;
-        private readonly IWorkflow _workflow;
 
         public StateManager(
             IDistributedCache cache,
             ILogger<StateManager> logger,
             IWorkflow workflow, 
-            IDocBuilder doc)
+            IDocBuilder doc,
+            IOptions<DistributedCacheEntryOptions> options)
         {
             _cache = cache;
             _logger = logger;
             _workflow = workflow;
             _doc = doc;
+            _options = options.Value;
             _messageTriggers = new List<StateMachine.TriggerWithParameters<Message>>();
             _callbackTriggers = new List<StateMachine.TriggerWithParameters<CallbackQuery>>();
         }
@@ -74,7 +78,7 @@ namespace Bot
         {
             var id = _stateKey.Invoke(message);
             _state.State = _machine.State;
-            _cache.SetString(id, JsonSerializer.Serialize(_state));
+            _cache.SetString(id, JsonSerializer.Serialize(_state), _options);
         }
 
         public async ValueTask OnCallbackQueryReceived(
@@ -192,6 +196,7 @@ namespace Bot
                 Command.Start,
                 Command.AlgList,
                 Command.UploadSource,
+                Command.Encode,
                 Command.Decode);
             
             ConfigureTriggerParameters(_callbackTriggers,
@@ -204,8 +209,13 @@ namespace Bot
                 .Permit(Command.Encode, State.Encode);
 
             var encoding = machine.Configure(State.Encode)
-                // .OnEntryFromAsync(CallBackTrigger(Command.Decode), ChooseAlg)
-                ;
+                .PermitReentry(Command.AlgList)
+                .PermitReentry(Command.SetAlg)
+                .PermitReentry(Command.UploadSource)
+                .OnEntryFromAsync(CallBackTrigger(Command.SetAlg), _workflow.RequestSource)
+                .OnEntryFromAsync(MessageTrigger(Command.UploadSource), _workflow.EncodeSource)
+                .OnEntryFromAsync(MessageTrigger(Command.AlgList), _workflow.SendAlgorithmsList)
+                .OnEntryFromAsync(MessageTrigger(Command.Encode), _workflow.SendAlgorithmsList);
 	
             var decoding = machine.Configure(State.Decode)
                 .PermitReentry(Command.AlgList)

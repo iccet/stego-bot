@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -48,6 +49,11 @@ namespace Api
             services.AddStackExchangeRedisCache(opt =>
             {
                 opt.Configuration = Configuration["REDIS_CONNECTION_STRING"];
+            });
+
+            services.Configure<DistributedCacheEntryOptions>(o =>
+            {
+                o.SetSlidingExpiration(TimeSpan.FromMinutes(30));
             });
             
             services.AddDataProtection()

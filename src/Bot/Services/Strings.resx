@@ -30,4 +30,7 @@
     <data name="Decoding" xml:space="preserve">
         <value>Solving the hardest puzzle of all time</value>
     </data>
+    <data name="Encoding" xml:space="preserve">
+        <value>Sewing your secrets into my pockets</value>
+    </data>
 </root>

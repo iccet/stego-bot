@@ -68,5 +68,11 @@ namespace Bot.Services {
                 return ResourceManager.GetString("Decoding", resourceCulture);
             }
         }
+        
+        internal static string Encoding {
+            get {
+                return ResourceManager.GetString("Encoding", resourceCulture);
+            }
+        }
     }
 }
