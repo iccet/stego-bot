@@ -75,7 +75,7 @@ namespace Api
                 options.EnableSensitiveDataLogging();
             });
             
-            services.AddRabbit(Configuration);
+            services.AddKafka(Configuration);
             
             services.AddSingleton<ITelegramBotClient>(provider => 
                 new TelegramBotClient(Configuration["TELEGRAM_TOKEN"]));
@@ -84,7 +84,8 @@ namespace Api
             services.AddSingleton<AbstractEncoder, Kutter>();
             
             services.AddHostedService<QueuedHostedService>();
-            services.AddSingleton<IBackgroundTaskQueue>(ctx => {
+            services.AddSingleton<IBackgroundTaskQueue>(ctx => 
+            {
                 if (!int.TryParse(Configuration["QueueCapacity"], out var queueCapacity))
                     queueCapacity = 100;
                 return new TelegramTaskQueue(queueCapacity);
@@ -97,6 +98,11 @@ namespace Api
             services.AddHostedService<TelegramConsumer>();
 
             services.AddHealthChecks()
+                .AddKafka(c =>
+                {
+                    c.BootstrapServers = Configuration["KAFKA_BOOTSTRAP_SERVERS"];
+                    c.ClientId = Dns.GetHostName();
+                })
                 .AddNpgSql(Configuration["DATABASE_CONNECTION_STRING"])
                 .AddRedis(Configuration["REDIS_CONNECTION_STRING"]);
             

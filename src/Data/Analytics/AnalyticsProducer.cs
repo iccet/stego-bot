@@ -1,23 +1,29 @@
 using System;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Api.Options;
+using Confluent.Kafka;
 using Core.Interfaces;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
+using Microsoft.Extensions.Options;
 
 namespace Data.Analytics
 {
     public class AnalyticsProducer : IAnalyticsProducer
     {
-        private readonly IConnection _connection;
-        private readonly ILogger<AnalyticsProducer> _logger;
+        private readonly IProducer<Null, string> _producer;
+        private readonly KafkaOptions _options;
+        private readonly ILogger<IAnalyticsProducer> _logger;
 
         public AnalyticsProducer(
-            ILogger<AnalyticsProducer> logger, 
-            IConnection connection)
+            ILogger<IAnalyticsProducer> logger,
+            IProducer<Null, string> producer,
+            IOptions<KafkaOptions> options)
         {
             _logger = logger;
-            _connection = connection;
+            _producer = producer;
+            _options = options.Value;
         }
 
         public void Delete(Guid id)
@@ -31,13 +37,22 @@ namespace Data.Analytics
             _logger.LogInformation($"Delete dictionary {id} - sent successfully.");
         }
 
-        private void Send<T>(string queueName, T obj)
+        private async Task Send<T>(string queueName, T obj)
         {
-            using var channel = _connection.CreateModel();
-            channel.QueueDeclare(queueName, true, false, false, null);
-            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj));
-            channel.BasicPublish("", queueName, null, body);
-            channel.Close();
+            try
+            {
+                var body = JsonSerializer.Serialize(obj);
+                var message = new Message<Null, string>
+                {
+                    Value = body
+                };
+                
+                await _producer.ProduceAsync(_options.StegoDecodeImageTopic, message);
+            }
+            catch (ProduceException<Null, string> e)
+            {
+                _logger.LogError(e, "Error while sending message");
+            }
         }
     }
 }

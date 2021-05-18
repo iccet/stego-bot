@@ -8,13 +8,64 @@ services:
     ports:
       - "${BACKEND_PORT:-80}:80"
     depends_on:
-      - rabbitmq
+      - kafka
       - cache
+      - database
     environment:
       - DATABASE_CONNECTION_STRING=Server=database;Port=5432;Database=stego;User Id=stego;Password=Q12345q; Include Error Detail=true;
       - REDIS_CONNECTION_STRING=cache,password=Q12345q
       - TELEGRAM_TOKEN=$TELEGRAM_TOKEN
     restart: always
+    networks:
+      - stegobot
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+    networks:
+      - stegobot
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - stegobot
+
+  database:
+    container_name: database
+    image: postgres:latest
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: Q12345q
+      POSTGRES_USER: stego
+      POSTGRES_DB: stego
+    networks:
+      - stegobot
+
+  cache:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "${CACHE_PORT:-6379}:6379"
+    restart: always
+    environment:
+      - REDIS_PASSWORD=Q12345q
     networks:
       - stegobot
 
