@@ -62,9 +62,48 @@
             <DependentUpon>Strings.resx</DependentUpon>
         </Compile>
     </ItemGroup>
+    
+    <Choose>
+        <When Condition="'$(BuildType)' == 'publish'">
+            <PropertyGroup>
+                <DefineConstants>Release</DefineConstants>
+            </PropertyGroup>
+        </When>
+    </Choose>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\lib\stego\src\CsStg.csproj" />
-    </ItemGroup>
+    <Choose>
+        <When Condition=" '$(Configuration)'=='Debug' ">
+            <ItemGroup>
+                <ProjectReference Include="..\..\lib\stego\src\CsStg.csproj" />
+            </ItemGroup>
+            <PropertyGroup>
+                <DebugSymbols>true</DebugSymbols>
+                <DebugType>full</DebugType>
+                <Optimize>false</Optimize>
+                <DefineConstants>DEBUG;TRACE</DefineConstants>
+            </PropertyGroup>
+        </When>
+        <When Condition=" '$(Configuration)'=='Release' ">
+            <ItemGroup>
+                <PackageReference Include="CsStg" Version="0.0.1" >
+                    <GeneratePathProperty>true</GeneratePathProperty>
+                </PackageReference>
+            </ItemGroup>
+            <PropertyGroup>
+                <DebugSymbols>false</DebugSymbols>
+                <Optimize>true</Optimize>
+                <DefineConstants>TRACE</DefineConstants>
+            </PropertyGroup>
+        </When>
+    </Choose>
+
+    <Target Name="CopyCsStgDependensies" AfterTargets="Build" >
+        <ItemGroup>
+            <CsStgDependensies Include="$(PkgCsStg)\lib\$(TargetFramework)\*.so*"/>
+        </ItemGroup>
+        <Copy Condition=" '$(Configuration)'=='Release' "
+              SourceFiles="@(CsStgDependensies)"
+              DestinationFolder="$(OutputPath)" />
+    </Target>
 
 </Project>
