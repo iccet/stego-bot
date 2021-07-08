@@ -3,10 +3,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Api.Extensions;
 using Bot;
+using Api.HealthCheck;
 using Bot.Interfaces;
 using Bot.Services;
 using Core.Interfaces;
@@ -165,7 +167,11 @@ namespace Api
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapHealthChecks("/hc", new BotHealthCheckOptions());
+            });
         }
     }
 }
